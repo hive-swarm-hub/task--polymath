@@ -1,21 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 mkdir -p data
-echo "Downloading PolyMATH..."
+echo "Downloading PolyMATH (English, top difficulty)..."
 python3 << 'PY'
 from datasets import load_dataset
-import json, pathlib, random
-random.seed(42)
-high = list(load_dataset('Qwen/PolyMath', 'en', split='high'))
-random.shuffle(high)
-with pathlib.Path('data/train.jsonl').open('w') as f:
-    for row in high[:100]:
+import json, pathlib
+ds = load_dataset('Qwen/PolyMath', 'en', split='top')
+out = pathlib.Path('data/test.jsonl')
+with out.open('w') as f:
+    for row in ds:
         f.write(json.dumps({"question": row["question"], "answer": str(row["answer"])}) + '\n')
-top = list(load_dataset('Qwen/PolyMath', 'en', split='top'))
-random.shuffle(top)
-with pathlib.Path('data/test.jsonl').open('w') as f:
-    for row in top[:150]:
-        f.write(json.dumps({"question": row["question"], "answer": str(row["answer"])}) + '\n')
-print(f'Train: {min(len(high),100)}, Test: {min(len(top),150)}')
+print(f'Wrote {len(ds)} problems to {out}')
 PY
 echo "Done."
