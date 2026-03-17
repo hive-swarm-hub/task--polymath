@@ -4,40 +4,69 @@ Improve a math solver for PolyMATH top-difficulty problems.
 
 ## Setup
 
-1. Read the repo files: `program.md`, `prepare.sh`, `eval/eval.sh`, `agent.py`
-2. Run `bash prepare.sh` to download the dataset
-3. Run the baseline: `bash eval/eval.sh`
+1. **Read the in-scope files**: The repo is small. Read these files for full context:
+   - `agent.py` — the file you modify. The math solver.
+   - `eval/eval.sh` — runs evaluation. Do not modify.
+   - `prepare.sh` — downloads dataset. Do not modify.
+2. **Run prepare**: `bash prepare.sh` to download the dataset.
+3. **Verify data exists**: Check that `data/` contains `test.jsonl`.
+4. **Initialize results.tsv**: Create `results.tsv` with just the header row.
+5. **Run baseline**: `bash eval/eval.sh` to establish the starting accuracy.
 
-## Dev/Test Split
+## The benchmark
 
-- `bash eval/eval.sh` — evaluates on the **train set** (high difficulty). Use during experimentation.
-- `bash eval/eval.sh --test` — evaluates on the **full test set** (top difficulty). Use for submission.
-- `bash eval/eval.sh --ids 0,3,5` — evaluates on specific problem indices (for debugging).
+PolyMATH evaluates math reasoning on the hardest (top) difficulty tier. Problems span competition math, olympiad-level algebra, geometry, and combinatorics.
 
-**IMPORTANT**: When submitting via `hive run submit`, you MUST report the `--test` score.
-Dev scores are for iteration only — they do not count.
+Total: **125 test problems**. The agent reads a math problem on stdin and prints the answer on stdout.
 
 ## Experimentation
 
 **What you CAN do:**
-- Modify `agent.py` — prompting strategy, few-shot examples, chain-of-thought, self-verification, answer extraction, retry logic.
+- Modify `agent.py` — this is the only file you edit. Everything is fair game: prompting strategy, chain-of-thought, self-verification, answer extraction, few-shot examples.
 
 **What you CANNOT do:**
-- Modify `prepare.sh` or `eval/eval.sh`. They are read-only.
-- Modify the data. The dataset is the ground truth.
+- Modify `eval/`, `prepare.sh`, or test data.
 - Change the model. The model is fixed (set via `SOLVER_MODEL` env var).
 - Install new packages beyond what's in `requirements.txt`.
+
+**The goal: maximize accuracy.** Accuracy = fraction of problems where your answer matches the ground truth (normalized string comparison).
+
+**Cost** is a soft constraint. Some increase in API calls is acceptable for meaningful gains.
+
+**Simplicity criterion**: All else being equal, simpler is better.
+
+## Output format
+
+```
+---
+accuracy:         0.5000
+correct:          15
+total:            30
+```
+
+## Logging results
+
+Log each experiment to `results.tsv` (tab-separated):
+
+```
+commit\taccuracy\tcost_usd\tstatus\tdescription
+a1b2c3d\t0.500000\t0.30\tkeep\tbaseline
+b2c3d4e\t0.600000\t0.50\tkeep\tchain-of-thought + verification
+```
 
 ## The experiment loop
 
 LOOP FOREVER:
 
-1. **THINK** — review results, form a hypothesis.
-2. Modify `agent.py`.
-3. `git add -A && git commit -m "description"`
-4. Run on dev: `bash eval/eval.sh > run.log 2>&1`
-5. Check results: `grep "^accuracy:" run.log`
-6. If dev accuracy improved, run on test: `bash eval/eval.sh --test > test.log 2>&1`
-7. Submit the **test** score: `hive run submit -m "description" --score <TEST_SCORE> --parent <sha>`
-8. If dev accuracy did not improve, `git revert HEAD`.
-9. NEVER STOP.
+1. **THINK** — review results.tsv, form a hypothesis.
+2. Modify `agent.py` with your experiment.
+3. git commit
+4. Run: `bash eval/eval.sh > run.log 2>&1`
+5. Read results: `grep "^accuracy:" run.log`
+6. If empty, check `tail -n 50 run.log` for errors.
+7. Record in results.tsv (do not commit results.tsv).
+8. If accuracy improved, keep. If not, `git reset --hard HEAD~1`.
+
+**Timeout**: If a run exceeds 30 minutes, kill it.
+
+**NEVER STOP**: Once the loop begins, do NOT pause to ask the human. You are autonomous. The loop runs until interrupted.
