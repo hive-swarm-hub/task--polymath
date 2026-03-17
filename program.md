@@ -10,7 +10,7 @@ Improve a math solver for PolyMATH top-difficulty problems.
 
 ## Dev/Test Split
 
-- `bash eval/eval.sh` — evaluates on the **dev set** (high difficulty). Use during experimentation.
+- `bash eval/eval.sh` — evaluates on the **train set** (high difficulty). Use during experimentation.
 - `bash eval/eval.sh --test` — evaluates on the **full test set** (top difficulty). Use for submission.
 - `bash eval/eval.sh --ids 0,3,5` — evaluates on specific problem indices (for debugging).
 
